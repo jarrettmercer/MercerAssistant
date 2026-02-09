@@ -1,0 +1,55 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+**/[Ll]ib/[Nn]et*/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+## User secrets
+secrets.json
+
+## IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+.idea/
+*.DotSettings.user
+
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+## User-specific
+appsettings.*.local.json
+
+## EF migrations local
+*.db
+*.db-shm
+*.db-wal

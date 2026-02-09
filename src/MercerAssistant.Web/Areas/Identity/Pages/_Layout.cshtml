@@ -1,0 +1,236 @@
+@{
+    ViewData["Title"] = ViewData["Title"] ?? "Account";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MercerAssistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/variables.css" />
+    <link rel="stylesheet" href="~/css/base.css" />
+    <style>
+        .identity-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--colors--body-bg);
+            padding: 24px;
+        }
+
+        .identity-box {
+            background: var(--colors--fill-color);
+            border: 1px solid var(--colors--border-color);
+            border-radius: var(--card-border-radius);
+            padding: 48px 40px 40px;
+            width: 100%;
+            max-width: 420px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .identity-logo {
+            text-align: center;
+            margin-bottom: 6px;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--colors--white);
+        }
+
+        .identity-logo span {
+            color: var(--colors--primary-color);
+        }
+
+        .identity-subtitle {
+            text-align: center;
+            color: var(--colors--gray-color);
+            font-size: var(--font-size--text-sm);
+            margin-bottom: 32px;
+        }
+
+        /* ===== Form Inputs ===== */
+        .form-floating {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .form-floating > .form-control {
+            background: var(--colors--body-bg);
+            border: 1px solid var(--colors--border-color);
+            border-radius: var(--btn-border-radius);
+            color: var(--colors--white);
+            font-family: 'Inter', sans-serif;
+            font-size: var(--font-size--text-default);
+            padding: 22px 16px 10px;
+            height: 58px;
+            width: 100%;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-floating > .form-control:focus {
+            background: var(--colors--body-bg);
+            border-color: var(--colors--primary-color);
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+            color: var(--colors--white);
+            outline: none;
+        }
+
+        .form-floating > .form-control::placeholder {
+            color: transparent;
+        }
+
+        .form-floating > label {
+            position: absolute;
+            top: 0;
+            left: 16px;
+            height: 100%;
+            padding: 18px 0;
+            pointer-events: none;
+            color: var(--colors--gray-color);
+            font-size: var(--font-size--text-default);
+            font-weight: 400;
+            transition: all 0.15s ease;
+            transform-origin: left top;
+            margin: 0;
+        }
+
+        .form-floating > .form-control:focus ~ label,
+        .form-floating > .form-control:not(:placeholder-shown) ~ label {
+            transform: scale(0.75) translateY(-10px);
+            color: var(--colors--primary-color);
+        }
+
+        /* ===== Checkbox ===== */
+        .checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 4px 0 24px;
+        }
+
+        .checkbox label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--colors--gray-color);
+            font-size: var(--font-size--text-sm);
+            font-weight: 400;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--colors--primary-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* ===== Button ===== */
+        .btn-primary {
+            display: block;
+            width: 100%;
+            background: var(--colors--primary-color);
+            color: var(--colors--white);
+            border: none;
+            border-radius: var(--btn-border-radius);
+            padding: 14px 24px;
+            font-family: 'Inter', sans-serif;
+            font-size: var(--font-size--text-default);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 4px;
+        }
+
+        .btn-primary:hover {
+            background: var(--colors--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(217, 119, 6, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* ===== Links ===== */
+        .identity-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--colors--border-color);
+        }
+
+        .identity-links a {
+            color: var(--colors--gray-color);
+            font-size: 13px;
+            transition: color 0.2s ease;
+        }
+
+        .identity-links a:hover {
+            color: var(--colors--primary-color);
+        }
+
+        /* Single link — center it */
+        .identity-links a:only-child {
+            margin: 0 auto;
+        }
+
+        /* ===== Validation ===== */
+        .text-danger,
+        .validation-summary-errors,
+        .field-validation-error {
+            color: var(--status-cancelled);
+            font-size: 13px;
+        }
+
+        .validation-summary-errors ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px;
+        }
+
+        .input-validation-error {
+            border-color: var(--status-cancelled) !important;
+        }
+
+        span.text-danger {
+            display: block;
+            margin-top: 6px;
+        }
+
+        @@media (max-width: 480px) {
+            .identity-box {
+                padding: 36px 24px 32px;
+            }
+
+            .identity-links {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="identity-wrapper">
+        <div class="identity-box">
+            <div class="identity-logo">Mercer<span>Assistant</span></div>
+            <p class="identity-subtitle">@ViewData["Title"]</p>
+            @RenderBody()
+        </div>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

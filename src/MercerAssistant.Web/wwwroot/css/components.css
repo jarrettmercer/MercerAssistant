@@ -1,0 +1,236 @@
+/* ===== CARDS ===== */
+.card {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 24px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    border-color: var(--colors--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(217, 119, 6, 0.1);
+}
+
+.card-static {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 24px;
+}
+
+/* ===== STAT CARDS ===== */
+.stat-card {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 24px 28px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--colors--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(217, 119, 6, 0.08);
+}
+
+.stat-card .stat-label {
+    font-size: var(--font-size--text-sm);
+    color: var(--colors--gray-color);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.stat-card .stat-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--colors--white);
+}
+
+.stat-card .stat-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(217, 119, 6, 0.08);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    color: var(--colors--primary-color);
+}
+
+/* ===== STATUS BADGES ===== */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge--confirmed {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--status-confirmed);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.status-badge--pending {
+    background: rgba(234, 179, 8, 0.1);
+    color: var(--status-pending);
+    border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.status-badge--cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--status-cancelled);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-badge--completed {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--status-completed);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* ===== CHAT ===== */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 140px);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chat-bubble {
+    max-width: 80%;
+    padding: 14px 18px;
+    border-radius: 16px;
+    font-size: var(--font-size--text-default);
+    line-height: var(--line-height--text-default);
+    animation: fadeInUp 0.3s ease;
+}
+
+.chat-bubble--user {
+    align-self: flex-end;
+    background: var(--amber);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    color: var(--colors--white);
+}
+
+.chat-bubble--assistant {
+    align-self: flex-start;
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    color: var(--colors--white);
+}
+
+.chat-bubble .timestamp {
+    font-size: 11px;
+    color: var(--colors--gray-color);
+    margin-top: 6px;
+}
+
+.chat-input-area {
+    padding: 16px 0;
+    border-top: 1px solid var(--colors--border-color);
+}
+
+/* ===== APPOINTMENT CARD ===== */
+.appointment-card {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s ease;
+}
+
+.appointment-card:hover {
+    border-color: var(--colors--primary-color);
+    transform: translateY(-1px);
+}
+
+.appointment-card .time-block {
+    text-align: center;
+    min-width: 70px;
+    padding: 12px;
+    background: rgba(217, 119, 6, 0.08);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+    border-radius: 12px;
+}
+
+.appointment-card .time-block .day {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--colors--primary-color);
+    text-transform: uppercase;
+}
+
+.appointment-card .time-block .date {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--colors--white);
+    line-height: 1;
+    margin: 4px 0;
+}
+
+.appointment-card .time-block .time {
+    font-size: 12px;
+    color: var(--colors--gray-color);
+}
+
+.appointment-card .details {
+    flex: 1;
+}
+
+.appointment-card .details .client-name {
+    font-weight: 600;
+    font-size: var(--font-size--text-lg);
+    color: var(--colors--white);
+}
+
+.appointment-card .details .client-email {
+    font-size: var(--font-size--text-sm);
+    color: var(--colors--gray-color);
+    margin-top: 2px;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease-out;
+}
+
+.scroll-reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}

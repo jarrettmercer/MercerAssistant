@@ -1,0 +1,73 @@
+@page "/chat"
+@attribute [Authorize(Policy = AppPermission.ViewChat)]
+@rendermode InteractiveServer
+
+<PageTitle>AI Chat - MercerAssistant</PageTitle>
+
+<div class="chat-container">
+    <div class="chat-messages" @ref="_scrollContainer">
+        @if (_messages.Count == 0)
+        {
+            <div style="text-align: center; margin: auto; opacity: 0.5;">
+                <MudIcon Icon="@Icons.Material.Filled.Chat" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+                <p class="text-gray">Ask me about scheduling, availability, or bookings.</p>
+            </div>
+        }
+
+        @foreach (var msg in _messages)
+        {
+            <div class="chat-bubble chat-bubble--@msg.Role">
+                <div>@msg.Content</div>
+                <div class="timestamp">@msg.Timestamp.ToString("h:mm tt")</div>
+            </div>
+        }
+
+        @if (_isLoading)
+        {
+            <div class="chat-bubble chat-bubble--assistant">
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+            </div>
+        }
+    </div>
+
+    <div class="chat-input-area">
+        <MudTextField @bind-Value="_userInput"
+                      Placeholder="Ask me about scheduling..."
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.Send"
+                      OnAdornmentClick="SendMessage"
+                      Immediate="true"
+                      Disabled="_isLoading"
+                      FullWidth="true" />
+    </div>
+</div>
+
+@code {
+    [Inject] private IAIAssistantService AIService { get; set; } = null!;
+
+    private List<ChatBubbleModel> _messages = [];
+    private string _userInput = "";
+    private bool _isLoading;
+    private ElementReference _scrollContainer;
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_userInput)) return;
+
+        var userMsg = _userInput.Trim();
+        _userInput = "";
+        _messages.Add(new("user", userMsg, DateTime.Now));
+        _isLoading = true;
+        StateHasChanged();
+
+        // TODO: Phase 3 - wire up real conversation ID
+        var response = await AIService.SendMessageAsync(Guid.Empty, userMsg);
+
+        _messages.Add(new("assistant", response.Message, DateTime.Now));
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    private record ChatBubbleModel(string Role, string Content, DateTime Timestamp);
+}

@@ -1,0 +1,54 @@
+:root {
+    /* Colors - Mercer Electric design system */
+    --colors--body-bg: #00050a;
+    --colors--white: white;
+    --colors--black: #0a0b10;
+    --colors--primary-color: #d97706;
+    --colors--primary-hover: #b45309;
+    --colors--transparent: transparent;
+    --colors--gray-color: #636374;
+    --colors--dark-gray: #1d1d1d;
+    --colors--fill-color: #161616;
+    --colors--border-color: #fff3;
+    --colors--bg-rgba: #ffffff1a;
+    --colors--darker-gray: #0d121a;
+
+    /* Named colors */
+    --amber: #2d2010;
+    --amber-2: #d97706;
+    --amber-light: #2a1f0e;
+    --amber-lighter: #5c3a0e;
+    --dark-amber: #17110a;
+    --dark-light: #2b2b2b;
+    --black-dark: #0d1521;
+
+    /* Status colors */
+    --status-confirmed: #22c55e;
+    --status-pending: #eab308;
+    --status-cancelled: #ef4444;
+    --status-completed: #3b82f6;
+
+    /* Font sizes */
+    --font-size--text-default: 16px;
+    --font-size--text-sm: 14px;
+    --font-size--text-lg: 18px;
+    --font-size--text-xl: 20px;
+
+    /* Heading sizes */
+    --font-size--h1: 48px;
+    --font-size--h2: 36px;
+    --font-size--h3: 28px;
+    --font-size--h4: 22px;
+    --font-size--h5: 18px;
+
+    /* Line heights */
+    --line-height--text-default: 150%;
+    --line-height--text-xl: 155%;
+
+    /* Spacing */
+    --container-max-width: 1200px;
+    --container-padding: 0 24px;
+    --card-border-radius: 16px;
+    --btn-border-radius: 8px;
+    --sidebar-width: 260px;
+}

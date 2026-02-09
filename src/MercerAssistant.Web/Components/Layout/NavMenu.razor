@@ -1,0 +1,50 @@
+<MudNavMenu>
+    <AuthorizeView Policy="@AppPermission.ViewDashboard">
+        <Authorized>
+            <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+                Dashboard
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Policy="@AppPermission.ViewChat">
+        <Authorized>
+            <MudNavLink Href="/chat" Icon="@Icons.Material.Filled.Chat">
+                AI Chat
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Policy="@AppPermission.ViewAvailability">
+        <Authorized>
+            <MudNavLink Href="/availability" Icon="@Icons.Material.Filled.Schedule">
+                Availability
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Policy="@AppPermission.ViewAppointments">
+        <Authorized>
+            <MudNavLink Href="/appointments" Icon="@Icons.Material.Filled.CalendarMonth">
+                Appointments
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Policy="@AppPermission.ViewSettings">
+        <Authorized>
+            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
+                Settings
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <MudDivider Class="my-2" Style="border-color: rgba(255,255,255,0.1);" />
+            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                User Management
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>

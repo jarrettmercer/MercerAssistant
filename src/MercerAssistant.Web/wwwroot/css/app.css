@@ -1,0 +1,108 @@
+/* ===== MudBlazor Theme Overrides ===== */
+
+/* Make MudBlazor inputs match the dark theme */
+.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--colors--border-color) !important;
+}
+
+.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--colors--primary-color) !important;
+}
+
+/* MudBlazor table overrides */
+.mud-table {
+    background: var(--colors--fill-color) !important;
+    border: 1px solid var(--colors--border-color) !important;
+    border-radius: var(--card-border-radius) !important;
+}
+
+.mud-table .mud-table-head .mud-table-cell {
+    border-bottom-color: var(--colors--border-color) !important;
+    color: var(--colors--gray-color) !important;
+    font-weight: 600;
+}
+
+.mud-table .mud-table-body .mud-table-cell {
+    border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* MudBlazor paper overrides */
+.mud-paper {
+    background-color: var(--colors--fill-color) !important;
+}
+
+/* MudBlazor drawer */
+.mud-drawer {
+    border-right-color: var(--colors--border-color) !important;
+}
+
+/* MudBlazor appbar glassmorphism */
+.mud-appbar {
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+}
+
+/* Stat grid layout */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+/* Page content area */
+.page-content {
+    padding: 32px;
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+}
+
+/* Blazor error UI */
+#blazor-error-ui {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--status-cancelled);
+    border-radius: 8px;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    padding: 16px 24px;
+    position: fixed;
+    z-index: 1000;
+    color: var(--colors--white);
+}
+
+/* Identity pages dark theme */
+.identity-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--colors--body-bg);
+}
+
+.identity-card {
+    background: var(--colors--fill-color);
+    border: 1px solid var(--colors--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+}
+
+.identity-card h1 {
+    font-size: var(--font-size--h3);
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.identity-card .logo {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.identity-card .logo span {
+    color: var(--colors--primary-color);
+}

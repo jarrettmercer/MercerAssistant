@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MercerAssistant.Core/MercerAssistant.Core.csproj" />
+    <Project Path="src/MercerAssistant.Infrastructure/MercerAssistant.Infrastructure.csproj" />
+    <Project Path="src/MercerAssistant.Web/MercerAssistant.Web.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,40 @@
+@page "/"
+@attribute [Authorize(Policy = AppPermission.ViewDashboard)]
+
+<PageTitle>Dashboard - MercerAssistant</PageTitle>
+
+<h2 style="margin-bottom: 8px;">Dashboard</h2>
+<p class="subtitle" style="margin-bottom: 32px;">Welcome back. Here's your scheduling overview.</p>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <MudIcon Icon="@Icons.Material.Filled.Today" />
+        </div>
+        <div class="stat-label">Today's Appointments</div>
+        <div class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <MudIcon Icon="@Icons.Material.Filled.DateRange" />
+        </div>
+        <div class="stat-label">This Week</div>
+        <div class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">
+            <MudIcon Icon="@Icons.Material.Filled.PendingActions" />
+        </div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">0</div>
+    </div>
+</div>
+
+<h4 style="margin-bottom: 16px;">Upcoming Appointments</h4>
+<div class="card-static" style="padding: 40px; text-align: center;">
+    <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+    <p class="text-gray">No upcoming appointments. Use the AI Chat to create your first booking.</p>
+    <MudButton Href="/chat" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3">
+        Open AI Chat
+    </MudButton>
+</div>

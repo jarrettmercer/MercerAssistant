@@ -1,0 +1,291 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using MercerAssistant.Core.Enums
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject ISnackbar Snackbar
+
+<PageTitle>User Management - MercerAssistant</PageTitle>
+
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+    <div>
+        <h2 style="margin-bottom: 4px;">User Management</h2>
+        <p class="subtitle">Manage users, roles, and feature permissions.</p>
+    </div>
+    <MudChip T="string" Color="Color.Primary" Size="Size.Small">@_users.Count users</MudChip>
+</div>
+
+<MudTable Items="_users" Hover="true" Breakpoint="Breakpoint.Sm" Loading="_loading" Elevation="0"
+          Style="background: var(--colors--fill-color); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px;">
+    <HeaderContent>
+        <MudTh>User</MudTh>
+        <MudTh>Role</MudTh>
+        <MudTh>Permissions</MudTh>
+        <MudTh>Joined</MudTh>
+        <MudTh Style="text-align: right;">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="User">
+            <div>
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">@context.DisplayName</MudText>
+                <MudText Typo="Typo.body2" Style="color: #636374;">@context.Email</MudText>
+            </div>
+        </MudTd>
+        <MudTd DataLabel="Role">
+            <MudChip T="string" Size="Size.Small"
+                     Color="@(context.CurrentRole == "Admin" ? Color.Primary : Color.Default)"
+                     Variant="Variant.Outlined">
+                @context.CurrentRole
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Permissions">
+            @if (context.CurrentRole == "Admin")
+            {
+                <MudText Typo="Typo.body2" Style="color: #636374; font-style: italic;">Full access</MudText>
+            }
+            else
+            {
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    @foreach (var perm in context.Permissions)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                 Style="background: rgba(217,119,6,0.1); color: #d97706; font-size: 11px;">
+                            @GetPermissionLabel(perm)
+                        </MudChip>
+                    }
+                    @if (context.Permissions.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Style="color: #636374;">None</MudText>
+                    }
+                </div>
+            }
+        </MudTd>
+        <MudTd DataLabel="Joined">
+            <MudText Typo="Typo.body2" Style="color: #636374;">@context.CreatedAt.ToString("MMM d, yyyy")</MudText>
+        </MudTd>
+        <MudTd DataLabel="Actions" Style="text-align: right;">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                       OnClick="@(() => OpenEditDialog(context))">
+                Edit
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="text-gray" Style="padding: 24px;">No users found.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@* ===== Edit User Dialog ===== *@
+<MudDialog @bind-Visible="_dialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: 700;">
+            Edit User
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_editingUser is not null)
+        {
+            <div style="margin-bottom: 20px;">
+                <MudText Typo="Typo.body1" Style="font-weight: 600;">@_editingUser.DisplayName</MudText>
+                <MudText Typo="Typo.body2" Style="color: #636374;">@_editingUser.Email</MudText>
+            </div>
+
+            <MudDivider Class="mb-4" />
+
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight: 600;">Role</MudText>
+            <MudSelect T="string" @bind-Value="_selectedRole" Variant="Variant.Outlined" Class="mb-4">
+                <MudSelectItem T="string" Value="@("Admin")">Admin</MudSelectItem>
+                <MudSelectItem T="string" Value="@("User")">User</MudSelectItem>
+            </MudSelect>
+
+            @if (_selectedRole != "Admin")
+            {
+                <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight: 600;">Feature Permissions</MudText>
+                <MudText Typo="Typo.body2" Class="mb-3" Style="color: #636374;">Toggle what this user can access.</MudText>
+
+                @foreach (var perm in AppPermission.All)
+                {
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <div>
+                            <MudText Typo="Typo.body1">@perm.Label</MudText>
+                            <MudText Typo="Typo.body2" Style="color: #636374; font-size: 12px;">@perm.Description</MudText>
+                        </div>
+                        <MudSwitch T="bool" Color="Color.Primary"
+                                   Value="@_selectedPermissions.Contains(perm.Value)"
+                                   ValueChanged="@(v => TogglePermission(perm.Value, v))" />
+                    </div>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-2">
+                    Admins have full access to all features.
+                </MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="SaveUser" Variant="Variant.Filled" Color="Color.Primary" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Save Changes
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<UserViewModel> _users = [];
+    private bool _loading = true;
+
+    // Dialog state
+    private bool _dialogVisible;
+    private UserViewModel? _editingUser;
+    private string _selectedRole = "User";
+    private HashSet<string> _selectedPermissions = [];
+    private bool _saving;
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        BackdropClick = false
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loading = true;
+        _users = [];
+
+        var allUsers = UserManager.Users.OrderBy(u => u.CreatedAt).ToList();
+        foreach (var user in allUsers)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            var claims = await UserManager.GetClaimsAsync(user);
+            var permissions = claims
+                .Where(c => c.Type == AppPermission.ClaimType)
+                .Select(c => c.Value)
+                .ToList();
+
+            _users.Add(new UserViewModel
+            {
+                Id = user.Id,
+                Email = user.Email ?? "",
+                DisplayName = string.IsNullOrEmpty(user.DisplayName) ? user.Email ?? "Unknown" : user.DisplayName,
+                CurrentRole = roles.FirstOrDefault() ?? "User",
+                Permissions = permissions,
+                CreatedAt = user.CreatedAt
+            });
+        }
+
+        _loading = false;
+    }
+
+    private void OpenEditDialog(UserViewModel user)
+    {
+        _editingUser = user;
+        _selectedRole = user.CurrentRole;
+        _selectedPermissions = [.. user.Permissions];
+        _dialogVisible = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogVisible = false;
+        _editingUser = null;
+    }
+
+    private void TogglePermission(string permission, bool enabled)
+    {
+        if (enabled)
+            _selectedPermissions.Add(permission);
+        else
+            _selectedPermissions.Remove(permission);
+    }
+
+    private async Task SaveUser()
+    {
+        if (_editingUser is null) return;
+
+        _saving = true;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_editingUser.Id);
+            if (user is null) return;
+
+            // Update role
+            var currentRoles = await UserManager.GetRolesAsync(user);
+            if (currentRoles.Count > 0)
+                await UserManager.RemoveFromRolesAsync(user, currentRoles);
+            await UserManager.AddToRoleAsync(user, _selectedRole);
+
+            // Update permissions (only relevant for non-admins)
+            var existingClaims = await UserManager.GetClaimsAsync(user);
+            var existingPermissions = existingClaims
+                .Where(c => c.Type == AppPermission.ClaimType)
+                .ToList();
+
+            // Remove all current permission claims
+            if (existingPermissions.Count > 0)
+                await UserManager.RemoveClaimsAsync(user, existingPermissions);
+
+            // Add selected permissions (skip for admins — they get full access via claims factory)
+            if (_selectedRole != "Admin" && _selectedPermissions.Count > 0)
+            {
+                var newClaims = _selectedPermissions
+                    .Select(p => new Claim(AppPermission.ClaimType, p))
+                    .ToList();
+                await UserManager.AddClaimsAsync(user, newClaims);
+            }
+
+            // Update the entity role field too
+            user.Role = _selectedRole == "Admin" ? UserRole.Admin : UserRole.Client;
+            await UserManager.UpdateAsync(user);
+
+            // Invalidate the user's security stamp so their cookie is refreshed
+            // with the new claims on their next request
+            await UserManager.UpdateSecurityStampAsync(user);
+
+            Snackbar.Add($"Updated {_editingUser.DisplayName}", Severity.Success);
+
+            CloseDialog();
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string GetPermissionLabel(string permission)
+    {
+        var match = AppPermission.All.FirstOrDefault(p => p.Value == permission);
+        return match.Label ?? permission;
+    }
+
+    private class UserViewModel
+    {
+        public string Id { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string CurrentRole { get; set; } = "User";
+        public List<string> Permissions { get; set; } = [];
+        public DateTime CreatedAt { get; set; }
+    }
+}

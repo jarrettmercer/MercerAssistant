@@ -1,0 +1,18 @@
+@page "/book/{Slug}"
+@attribute [AllowAnonymous]
+@layout MinimalLayout
+
+<PageTitle>Book an Appointment</PageTitle>
+
+<div style="max-width: 600px; margin: 60px auto; padding: 0 24px;">
+    <div class="card-static" style="text-align: center; padding: 48px 32px;">
+        <h3 style="margin-bottom: 12px;">Book an Appointment</h3>
+        <p class="text-gray" style="margin-bottom: 32px;">Public booking page for <strong class="text-primary">@Slug</strong></p>
+        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+        <p class="text-gray">Date picker and time slot selection coming in Phase 4.</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+}

@@ -1,5 +1,11 @@
 @page "/"
 @attribute [Authorize(Policy = AppPermission.ViewDashboard)]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+
+@inject ISchedulingService SchedulingService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Dashboard - MercerAssistant</PageTitle>
 
@@ -12,29 +18,106 @@
             <MudIcon Icon="@Icons.Material.Filled.Today" />
         </div>
         <div class="stat-label">Today's Appointments</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value">@_todayCount</div>
     </div>
     <div class="stat-card">
         <div class="stat-icon">
             <MudIcon Icon="@Icons.Material.Filled.DateRange" />
         </div>
         <div class="stat-label">This Week</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value">@_weekCount</div>
     </div>
     <div class="stat-card">
         <div class="stat-icon">
             <MudIcon Icon="@Icons.Material.Filled.PendingActions" />
         </div>
         <div class="stat-label">Pending</div>
-        <div class="stat-value">0</div>
+        <div class="stat-value">@_pendingCount</div>
     </div>
 </div>
 
 <h4 style="margin-bottom: 16px;">Upcoming Appointments</h4>
-<div class="card-static" style="padding: 40px; text-align: center;">
-    <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
-    <p class="text-gray">No upcoming appointments. Use the AI Chat to create your first booking.</p>
-    <MudButton Href="/chat" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3">
-        Open AI Chat
-    </MudButton>
-</div>
+
+@if (_loading)
+{
+    <div class="card-static" style="padding: 40px; text-align: center;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else if (_upcoming.Count == 0)
+{
+    <div class="card-static" style="padding: 40px; text-align: center;">
+        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+        <p class="text-gray">No upcoming appointments. Use the AI Chat to create your first booking.</p>
+        <MudButton Href="/chat" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3">
+            Open AI Chat
+        </MudButton>
+    </div>
+}
+else
+{
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        @foreach (var appt in _upcoming)
+        {
+            <div class="appointment-card">
+                <div class="time-block">
+                    <div class="day">@appt.StartTimeUtc.ToLocalTime().ToString("ddd")</div>
+                    <div class="date">@appt.StartTimeUtc.ToLocalTime().Day</div>
+                    <div class="time">@appt.StartTimeUtc.ToLocalTime().ToString("h:mm tt")</div>
+                </div>
+                <div class="details">
+                    <div class="client-name">@appt.ClientName</div>
+                    <div class="client-email">@appt.ClientEmail</div>
+                    @if (!string.IsNullOrEmpty(appt.Title))
+                    {
+                        <div style="margin-top: 4px; font-size: 13px; color: var(--colors--gray-color);">@appt.Title</div>
+                    }
+                </div>
+                <span class="status-badge status-badge--@appt.Status.ToLower()">@appt.Status</span>
+            </div>
+        }
+    </div>
+
+    @if (_upcoming.Count >= 5)
+    {
+        <div style="text-align: center; margin-top: 16px;">
+            <MudButton Href="/appointments" Variant="Variant.Text" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">
+                View all appointments
+            </MudButton>
+        </div>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private int _todayCount;
+    private int _weekCount;
+    private int _pendingCount;
+    private List<AppointmentDto> _upcoming = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+
+        // Today's range
+        var todayStart = DateTime.UtcNow.Date;
+        var todayEnd = todayStart.AddDays(1);
+
+        // Week range (Monday to Sunday)
+        var now = DateTime.UtcNow;
+        var daysToMonday = ((int)now.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        var weekStart = now.Date.AddDays(-daysToMonday);
+        var weekEnd = weekStart.AddDays(7);
+
+        var todayAppointments = await SchedulingService.GetAppointmentsByDateRangeAsync(userId, todayStart, todayEnd);
+        var weekAppointments = await SchedulingService.GetAppointmentsByDateRangeAsync(userId, weekStart, weekEnd);
+        _upcoming = await SchedulingService.GetUpcomingAppointmentsAsync(userId, 5);
+
+        _todayCount = todayAppointments.Count(a => a.Status != "Cancelled");
+        _weekCount = weekAppointments.Count(a => a.Status != "Cancelled");
+        _pendingCount = weekAppointments.Count(a => a.Status == "Pending");
+
+        _loading = false;
+    }
+}

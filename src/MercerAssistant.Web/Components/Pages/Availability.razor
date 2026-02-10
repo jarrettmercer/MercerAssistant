@@ -1,14 +1,331 @@
 @page "/availability"
 @attribute [Authorize(Policy = AppPermission.ViewAvailability)]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using MercerAssistant.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+
+@inject AppDbContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
 
 <PageTitle>Availability - MercerAssistant</PageTitle>
 
-<h2 style="margin-bottom: 8px;">Availability</h2>
-<p class="subtitle" style="margin-bottom: 32px;">Set your weekly schedule for bookings.</p>
-
-<div class="card-static">
-    <p class="text-gray" style="text-align: center; padding: 40px 0;">
-        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Style="color: #636374; display: block; margin: 0 auto 12px;" />
-        Availability editor coming in Phase 2.
-    </p>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+    <div>
+        <h2 style="margin-bottom: 4px;">Availability</h2>
+        <p class="subtitle">Set your weekly schedule for bookings.</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ResetGrid" Disabled="_saving">
+            Reset
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAvailability" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Save Changes
+        </MudButton>
+    </div>
 </div>
+
+@if (_loading)
+{
+    <div class="card-static" style="padding: 60px; text-align: center;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else
+{
+    <div class="card-static" style="padding: 0; overflow-x: auto;">
+        <table class="availability-grid">
+            <thead>
+                <tr>
+                    <th class="time-header"></th>
+                    @foreach (var day in _days)
+                    {
+                        <th>@day.name</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (int h = StartHour; h < EndHour; h++)
+                {
+                    var hour = h;
+                    <tr>
+                        <td class="time-label">@FormatHour(hour)</td>
+                        @foreach (var day in _days)
+                        {
+                            var dayOfWeek = day.dow;
+                            var isActive = _grid[dayOfWeek].Contains(hour);
+                            <td class="grid-cell @(isActive ? "active" : "")"
+                                @onclick="() => ToggleCell(dayOfWeek, hour)"
+                                @onmouseenter="() => HandleMouseEnter(dayOfWeek, hour)"
+                                @onmousedown="() => HandleMouseDown(dayOfWeek, hour)">
+                                @if (isActive)
+                                {
+                                    <span class="cell-time">@FormatHour(hour)</span>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 16px; display: flex; gap: 20px; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: rgba(217,119,6,0.25); border: 1px solid #d97706;"></div>
+            <span class="text-gray" style="font-size: 13px;">Available</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 16px; height: 16px; border-radius: 4px; background: var(--colors--fill-color); border: 1px solid var(--colors--border-color);"></div>
+            <span class="text-gray" style="font-size: 13px;">Unavailable</span>
+        </div>
+    </div>
+}
+
+<style>
+    .availability-grid {
+        width: 100%;
+        border-collapse: collapse;
+        user-select: none;
+    }
+
+    .availability-grid thead th {
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--colors--gray-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--colors--border-color);
+    }
+
+    .availability-grid .time-header {
+        width: 70px;
+    }
+
+    .availability-grid .time-label {
+        padding: 0 12px;
+        font-size: 12px;
+        color: var(--colors--gray-color);
+        font-weight: 500;
+        text-align: right;
+        white-space: nowrap;
+        vertical-align: top;
+        padding-top: 6px;
+    }
+
+    .availability-grid .grid-cell {
+        height: 40px;
+        border: 1px solid rgba(255,255,255,0.05);
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: center;
+        position: relative;
+    }
+
+    .availability-grid .grid-cell:hover {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.1);
+    }
+
+    .availability-grid .grid-cell.active {
+        background: rgba(217, 119, 6, 0.15);
+        border-color: rgba(217, 119, 6, 0.3);
+    }
+
+    .availability-grid .grid-cell.active:hover {
+        background: rgba(217, 119, 6, 0.25);
+    }
+
+    .availability-grid .cell-time {
+        font-size: 11px;
+        color: var(--colors--primary-color);
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private const int StartHour = 6;
+    private const int EndHour = 22;
+
+    private bool _loading = true;
+    private bool _saving;
+    private bool _isDragging;
+    private bool _dragActivate;
+    private string _userId = "";
+
+    // Grid state: DayOfWeek -> set of active hours
+    private Dictionary<DayOfWeek, HashSet<int>> _grid = new();
+    private Dictionary<DayOfWeek, HashSet<int>> _savedGrid = new();
+
+    private readonly (string name, DayOfWeek dow)[] _days =
+    [
+        ("Mon", DayOfWeek.Monday),
+        ("Tue", DayOfWeek.Tuesday),
+        ("Wed", DayOfWeek.Wednesday),
+        ("Thu", DayOfWeek.Thursday),
+        ("Fri", DayOfWeek.Friday),
+        ("Sat", DayOfWeek.Saturday),
+        ("Sun", DayOfWeek.Sunday)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+
+        // Initialize empty grid
+        foreach (var day in Enum.GetValues<DayOfWeek>())
+        {
+            _grid[day] = new HashSet<int>();
+            _savedGrid[day] = new HashSet<int>();
+        }
+
+        // Load existing windows
+        var windows = await Db.AvailabilityWindows
+            .Where(w => w.UserId == _userId && w.IsActive)
+            .ToListAsync();
+
+        foreach (var window in windows)
+        {
+            var startHour = window.StartTime.Hour;
+            var endHour = window.EndTime.Hour;
+            if (window.EndTime.Minute > 0) endHour++;
+
+            for (int h = startHour; h < endHour; h++)
+            {
+                _grid[window.DayOfWeek].Add(h);
+                _savedGrid[window.DayOfWeek].Add(h);
+            }
+        }
+
+        _loading = false;
+    }
+
+    private void ToggleCell(DayOfWeek day, int hour)
+    {
+        if (_grid[day].Contains(hour))
+            _grid[day].Remove(hour);
+        else
+            _grid[day].Add(hour);
+    }
+
+    private void HandleMouseDown(DayOfWeek day, int hour)
+    {
+        _isDragging = true;
+        _dragActivate = !_grid[day].Contains(hour);
+    }
+
+    private void HandleMouseEnter(DayOfWeek day, int hour)
+    {
+        if (!_isDragging) return;
+
+        if (_dragActivate)
+            _grid[day].Add(hour);
+        else
+            _grid[day].Remove(hour);
+    }
+
+    private void ResetGrid()
+    {
+        foreach (var day in Enum.GetValues<DayOfWeek>())
+        {
+            _grid[day] = new HashSet<int>(_savedGrid[day]);
+        }
+    }
+
+    private async Task SaveAvailability()
+    {
+        _saving = true;
+
+        try
+        {
+            // Remove all existing windows for this user
+            var existing = await Db.AvailabilityWindows
+                .Where(w => w.UserId == _userId)
+                .ToListAsync();
+            Db.AvailabilityWindows.RemoveRange(existing);
+
+            // Create new windows from grid - merge consecutive hours
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                var activeHours = _grid[day].OrderBy(h => h).ToList();
+                if (activeHours.Count == 0) continue;
+
+                int blockStart = activeHours[0];
+                int blockEnd = activeHours[0] + 1;
+
+                for (int i = 1; i < activeHours.Count; i++)
+                {
+                    if (activeHours[i] == blockEnd)
+                    {
+                        blockEnd = activeHours[i] + 1;
+                    }
+                    else
+                    {
+                        Db.AvailabilityWindows.Add(new AvailabilityWindow
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = _userId,
+                            DayOfWeek = day,
+                            StartTime = new TimeOnly(blockStart, 0),
+                            EndTime = new TimeOnly(blockEnd, 0),
+                            IsActive = true
+                        });
+
+                        blockStart = activeHours[i];
+                        blockEnd = activeHours[i] + 1;
+                    }
+                }
+
+                // Save the last block
+                Db.AvailabilityWindows.Add(new AvailabilityWindow
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = _userId,
+                    DayOfWeek = day,
+                    StartTime = new TimeOnly(blockStart, 0),
+                    EndTime = new TimeOnly(blockEnd, 0),
+                    IsActive = true
+                });
+            }
+
+            await Db.SaveChangesAsync();
+
+            // Update saved state
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                _savedGrid[day] = new HashSet<int>(_grid[day]);
+            }
+
+            Snackbar.Add("Availability saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string FormatHour(int hour)
+    {
+        return hour switch
+        {
+            0 => "12 AM",
+            12 => "12 PM",
+            > 12 => $"{hour - 12} PM",
+            _ => $"{hour} AM"
+        };
+    }
+}

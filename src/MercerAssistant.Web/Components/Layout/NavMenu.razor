@@ -33,9 +33,14 @@
 
     <AuthorizeView Policy="@AppPermission.ViewSettings">
         <Authorized>
-            <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings">
-                Settings
-            </MudNavLink>
+            <MudNavGroup Title="Settings" Icon="@Icons.Material.Filled.Settings">
+                <MudNavLink Href="/settings/booking" Icon="@Icons.Material.Filled.WebAsset">
+                    Booking Page
+                </MudNavLink>
+                <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Tune">
+                    General
+                </MudNavLink>
+            </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 

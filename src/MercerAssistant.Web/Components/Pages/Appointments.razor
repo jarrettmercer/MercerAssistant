@@ -1,14 +1,447 @@
 @page "/appointments"
 @attribute [Authorize(Policy = AppPermission.ViewAppointments)]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using MercerAssistant.Infrastructure.Data
+
+@inject ISchedulingService SchedulingService
+@inject AppDbContext Db
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
 
 <PageTitle>Appointments - MercerAssistant</PageTitle>
 
-<h2 style="margin-bottom: 8px;">Appointments</h2>
-<p class="subtitle" style="margin-bottom: 32px;">Manage your upcoming and past bookings.</p>
-
-<div class="card-static">
-    <p class="text-gray" style="text-align: center; padding: 40px 0;">
-        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Large" Style="color: #636374; display: block; margin: 0 auto 12px;" />
-        Appointment management coming in Phase 2.
-    </p>
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px;">
+    <div>
+        <h2 style="margin-bottom: 4px;">Appointments</h2>
+        <p class="subtitle">Manage your upcoming and past bookings.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+            New Appointment
+        </MudButton>
+        <MudToggleIconButton @bind-Toggled="_cardView"
+                             Icon="@Icons.Material.Filled.ViewList"
+                             ToggledIcon="@Icons.Material.Filled.ViewModule"
+                             Color="Color.Default" ToggledColor="Color.Primary" />
+    </div>
 </div>
+
+@* Filter tabs *@
+<div style="display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;">
+    @foreach (var tab in _tabs)
+    {
+        var isActive = _activeTab == tab.key;
+        <MudButton Variant="@(isActive ? Variant.Filled : Variant.Outlined)"
+                   Color="@(isActive ? Color.Primary : Color.Default)"
+                   Size="Size.Small"
+                   OnClick="@(() => SetTab(tab.key))">
+            @tab.label
+            @if (tab.count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Class="ml-2"
+                         Style="@(isActive ? "background: rgba(255,255,255,0.2); color: white; min-height: 20px; font-size: 11px;" : "min-height: 20px; font-size: 11px;")">
+                    @tab.count
+                </MudChip>
+            }
+        </MudButton>
+    }
+</div>
+
+@if (_loading)
+{
+    <div class="card-static" style="padding: 60px; text-align: center;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else if (_filteredAppointments.Count == 0)
+{
+    <div class="card-static" style="padding: 40px; text-align: center;">
+        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+        <p class="text-gray">No @_activeTab.ToLower() appointments found.</p>
+    </div>
+}
+else if (_cardView)
+{
+    @* Card View *@
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+        @foreach (var appt in _filteredAppointments)
+        {
+            <div class="appointment-card">
+                <div class="time-block">
+                    <div class="day">@appt.StartTimeUtc.ToLocalTime().ToString("ddd")</div>
+                    <div class="date">@appt.StartTimeUtc.ToLocalTime().Day</div>
+                    <div class="time">@appt.StartTimeUtc.ToLocalTime().ToString("h:mm tt")</div>
+                </div>
+                <div class="details">
+                    <div class="client-name">@appt.ClientName</div>
+                    <div class="client-email">@appt.ClientEmail</div>
+                    @if (!string.IsNullOrEmpty(appt.Title))
+                    {
+                        <div style="margin-top: 4px; font-size: 13px; color: var(--colors--gray-color);">@appt.Title</div>
+                    }
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="status-badge status-badge--@appt.Status.ToLower()">@appt.Status</span>
+                    @RenderActions(appt)
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    @* Table View *@
+    <MudTable Items="_filteredAppointments" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0"
+              Style="background: var(--colors--fill-color); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px;">
+        <HeaderContent>
+            <MudTh>Client</MudTh>
+            <MudTh>Date / Time</MudTh>
+            <MudTh>Duration</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Client">
+                <div>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">@context.ClientName</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #636374;">@context.ClientEmail</MudText>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Date/Time">
+                <MudText Typo="Typo.body2">@context.StartTimeUtc.ToLocalTime().ToString("MMM d, yyyy")</MudText>
+                <MudText Typo="Typo.body2" Style="color: #636374;">@context.StartTimeUtc.ToLocalTime().ToString("h:mm tt")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Duration">
+                <MudText Typo="Typo.body2">@context.DurationMinutes min</MudText>
+            </MudTd>
+            <MudTd DataLabel="Status">
+                <span class="status-badge status-badge--@context.Status.ToLower()">@context.Status</span>
+            </MudTd>
+            <MudTd DataLabel="Actions" Style="text-align: right;">
+                @RenderActions(context)
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Class="text-gray" Style="padding: 24px;">No appointments found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@* Cancel Dialog *@
+<MudDialog @bind-Visible="_cancelDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: 700;">Cancel Appointment</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-3">
+            Are you sure you want to cancel this appointment with <strong>@_cancellingAppt?.ClientName</strong>?
+        </MudText>
+        <MudTextField @bind-Value="_cancelReason" Label="Reason (optional)" Variant="Variant.Outlined"
+                      Lines="3" Placeholder="Optionally provide a reason..." />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCancelDialog" Variant="Variant.Text">Back</MudButton>
+        <MudButton OnClick="ConfirmCancel" Variant="Variant.Filled" Color="Color.Error" Disabled="_actionLoading">
+            @if (_actionLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Cancel Appointment
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* Create Appointment Dialog *@
+<MudDialog @bind-Visible="_createDialogVisible" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight: 700;">New Appointment</MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="display: grid; gap: 16px;">
+            <MudTextField @bind-Value="_newClientName" Label="Client Name" Variant="Variant.Outlined" Required="true" />
+            <MudTextField @bind-Value="_newClientEmail" Label="Client Email" Variant="Variant.Outlined" InputType="InputType.Email" Required="true" />
+            <MudTextField @bind-Value="_newClientPhone" Label="Phone (optional)" Variant="Variant.Outlined" />
+            <MudDatePicker @bind-Date="_newDate" Label="Date" Variant="Variant.Outlined" MinDate="DateTime.Today"
+                           Color="Color.Primary" />
+            <MudSelect @bind-Value="_newTime" Label="Time" Variant="Variant.Outlined">
+                @for (int h = 6; h < 22; h++)
+                {
+                    foreach (var m in new[] { 0, 15, 30, 45 })
+                    {
+                        var ts = new TimeSpan(h, m, 0);
+                        var label = DateTime.Today.Add(ts).ToString("h:mm tt");
+                        <MudSelectItem Value="@((TimeSpan?)ts)">@label</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+            <MudSelect @bind-Value="_newDuration" Label="Duration" Variant="Variant.Outlined">
+                <MudSelectItem Value="15">15 minutes</MudSelectItem>
+                <MudSelectItem Value="30">30 minutes</MudSelectItem>
+                <MudSelectItem Value="45">45 minutes</MudSelectItem>
+                <MudSelectItem Value="60">60 minutes</MudSelectItem>
+                <MudSelectItem Value="90">90 minutes</MudSelectItem>
+            </MudSelect>
+            <MudTextField @bind-Value="_newNotes" Label="Notes (optional)" Variant="Variant.Outlined" Lines="2" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateDialog" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton OnClick="CreateAppointment" Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(_actionLoading || string.IsNullOrWhiteSpace(_newClientName) || string.IsNullOrWhiteSpace(_newClientEmail) || _newDate is null || _newTime is null)">
+            @if (_actionLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private bool _loading = true;
+    private bool _cardView;
+    private bool _actionLoading;
+    private string _userId = "";
+    private string _activeTab = "Upcoming";
+
+    // Cancel dialog
+    private bool _cancelDialogVisible;
+    private AppointmentDto? _cancellingAppt;
+    private string _cancelReason = "";
+
+    // Create dialog
+    private bool _createDialogVisible;
+    private string _newClientName = "";
+    private string _newClientEmail = "";
+    private string _newClientPhone = "";
+    private DateTime? _newDate = DateTime.Today;
+    private TimeSpan? _newTime = new TimeSpan(9, 0, 0);
+    private int _newDuration = 30;
+    private string _newNotes = "";
+
+    private readonly DialogOptions _dialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        BackdropClick = false
+    };
+
+    private List<AppointmentDto> _allAppointments = [];
+    private List<AppointmentDto> _filteredAppointments = [];
+    private (string key, string label, int count)[] _tabs = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        await LoadAppointments();
+    }
+
+    private async Task LoadAppointments()
+    {
+        _loading = true;
+
+        // Load a wide range (past year to next year)
+        var rangeStart = DateTime.UtcNow.AddYears(-1);
+        var rangeEnd = DateTime.UtcNow.AddYears(1);
+        _allAppointments = await SchedulingService.GetAppointmentsByDateRangeAsync(_userId, rangeStart, rangeEnd);
+
+        UpdateTabs();
+        ApplyFilter();
+        _loading = false;
+    }
+
+    private void UpdateTabs()
+    {
+        var now = DateTime.UtcNow;
+        var upcoming = _allAppointments.Count(a => a.StartTimeUtc >= now && a.Status != "Cancelled");
+        var past = _allAppointments.Count(a => a.StartTimeUtc < now && a.Status != "Cancelled");
+        var cancelled = _allAppointments.Count(a => a.Status == "Cancelled");
+
+        _tabs =
+        [
+            ("Upcoming", "Upcoming", upcoming),
+            ("All", "All", _allAppointments.Count),
+            ("Past", "Past", past),
+            ("Cancelled", "Cancelled", cancelled)
+        ];
+    }
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var now = DateTime.UtcNow;
+        _filteredAppointments = _activeTab switch
+        {
+            "Upcoming" => _allAppointments.Where(a => a.StartTimeUtc >= now && a.Status != "Cancelled").ToList(),
+            "Past" => _allAppointments.Where(a => a.StartTimeUtc < now && a.Status != "Cancelled").ToList(),
+            "Cancelled" => _allAppointments.Where(a => a.Status == "Cancelled").ToList(),
+            _ => _allAppointments.ToList()
+        };
+    }
+
+    private RenderFragment RenderActions(AppointmentDto appt) => __builder =>
+    {
+        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            @if (appt.Status == "Pending")
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
+                           OnClick="@(() => ConfirmAppointment(appt.Id))" Disabled="_actionLoading">
+                    Confirm
+                </MudButton>
+            }
+            @if (appt.Status is "Pending" or "Confirmed")
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                           OnClick="@(() => OpenCancelDialog(appt))" Disabled="_actionLoading">
+                    Cancel
+                </MudButton>
+            }
+            @if (appt.Status == "Confirmed" && appt.StartTimeUtc < DateTime.UtcNow)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
+                           OnClick="@(() => CompleteAppointment(appt.Id))" Disabled="_actionLoading">
+                    Complete
+                </MudButton>
+            }
+        </div>
+    };
+
+    private async Task ConfirmAppointment(Guid id)
+    {
+        _actionLoading = true;
+        try
+        {
+            await SchedulingService.ConfirmBookingAsync(id);
+            Snackbar.Add("Appointment confirmed", Severity.Success);
+            await LoadAppointments();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _actionLoading = false;
+        }
+    }
+
+    private void OpenCancelDialog(AppointmentDto appt)
+    {
+        _cancellingAppt = appt;
+        _cancelReason = "";
+        _cancelDialogVisible = true;
+    }
+
+    private void CloseCancelDialog()
+    {
+        _cancelDialogVisible = false;
+        _cancellingAppt = null;
+    }
+
+    private async Task ConfirmCancel()
+    {
+        if (_cancellingAppt is null) return;
+
+        _actionLoading = true;
+        try
+        {
+            await SchedulingService.CancelBookingAsync(_cancellingAppt.Id, string.IsNullOrWhiteSpace(_cancelReason) ? null : _cancelReason);
+            Snackbar.Add("Appointment cancelled", Severity.Success);
+            CloseCancelDialog();
+            await LoadAppointments();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _actionLoading = false;
+        }
+    }
+
+    private async Task CompleteAppointment(Guid id)
+    {
+        _actionLoading = true;
+        try
+        {
+            var appointment = await Db.Appointments.FindAsync(id);
+            if (appointment is null) throw new InvalidOperationException("Appointment not found.");
+            appointment.Status = AppointmentStatus.Completed;
+            appointment.UpdatedAt = DateTime.UtcNow;
+            await Db.SaveChangesAsync();
+            Snackbar.Add("Appointment completed", Severity.Success);
+            await LoadAppointments();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _actionLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _newClientName = "";
+        _newClientEmail = "";
+        _newClientPhone = "";
+        _newDate = DateTime.Today;
+        _newTime = new TimeSpan(9, 0, 0);
+        _newDuration = 30;
+        _newNotes = "";
+        _createDialogVisible = true;
+    }
+
+    private void CloseCreateDialog()
+    {
+        _createDialogVisible = false;
+    }
+
+    private async Task CreateAppointment()
+    {
+        if (_newDate is null || _newTime is null) return;
+
+        _actionLoading = true;
+        try
+        {
+            var startLocal = _newDate.Value.Date + _newTime.Value;
+            var startUtc = startLocal.ToUniversalTime();
+
+            var request = new BookingRequestDto(
+                ProviderId: _userId,
+                ClientName: _newClientName.Trim(),
+                ClientEmail: _newClientEmail.Trim(),
+                ClientPhone: string.IsNullOrWhiteSpace(_newClientPhone) ? null : _newClientPhone.Trim(),
+                StartTimeUtc: startUtc,
+                DurationMinutes: _newDuration,
+                Notes: string.IsNullOrWhiteSpace(_newNotes) ? null : _newNotes.Trim(),
+                BookingPageId: null
+            );
+
+            await SchedulingService.CreateBookingAsync(request);
+            Snackbar.Add("Appointment created", Severity.Success);
+            CloseCreateDialog();
+            await LoadAppointments();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _actionLoading = false;
+        }
+    }
+}

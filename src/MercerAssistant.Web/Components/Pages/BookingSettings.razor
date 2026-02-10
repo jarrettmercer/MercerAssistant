@@ -1,0 +1,161 @@
+@page "/settings/booking"
+@attribute [Authorize(Policy = AppPermission.ViewSettings)]
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+
+@inject IBookingPageService BookingPageService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>Booking Settings - MercerAssistant</PageTitle>
+
+<h2 style="margin-bottom: 4px;">Booking Page Settings</h2>
+<p class="subtitle" style="margin-bottom: 32px;">Configure your public booking page and scheduling preferences.</p>
+
+@if (_loading)
+{
+    <div class="card-static" style="padding: 60px; text-align: center;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else if (_bookingPage is null)
+{
+    <div class="card-static" style="padding: 40px; text-align: center;">
+        <MudIcon Icon="@Icons.Material.Filled.WebAsset" Size="Size.Large" Style="color: #636374; margin-bottom: 12px;" />
+        <p class="text-gray" style="margin-bottom: 16px;">You don't have a booking page yet. Create one to let clients schedule with you.</p>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateBookingPage" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create Booking Page
+        </MudButton>
+    </div>
+}
+else
+{
+    <div class="card-static">
+        <div style="display: grid; gap: 24px; max-width: 600px;">
+            <MudTextField @bind-Value="_bookingPage.Title" Label="Title" Variant="Variant.Outlined"
+                          Placeholder="e.g. Book a Meeting" />
+
+            <MudTextField @bind-Value="_bookingPage.Slug" Label="Slug" Variant="Variant.Outlined"
+                          Adornment="Adornment.Start" AdornmentText="/book/"
+                          Placeholder="your-slug" HelperText="Your booking page URL" />
+
+            <MudTextField @bind-Value="_bookingPage.Description" Label="Description" Variant="Variant.Outlined"
+                          Lines="3" Placeholder="A brief description for your booking page..." />
+
+            <MudSelect @bind-Value="_bookingPage.DefaultDurationMinutes" Label="Default Duration" Variant="Variant.Outlined">
+                <MudSelectItem Value="15">15 minutes</MudSelectItem>
+                <MudSelectItem Value="30">30 minutes</MudSelectItem>
+                <MudSelectItem Value="45">45 minutes</MudSelectItem>
+                <MudSelectItem Value="60">60 minutes</MudSelectItem>
+            </MudSelect>
+
+            <MudNumericField @bind-Value="_bookingPage.BufferMinutes" Label="Buffer Between Appointments (minutes)"
+                             Variant="Variant.Outlined" Min="0" Max="120" />
+
+            <MudNumericField @bind-Value="_bookingPage.MinNoticeHours" Label="Minimum Notice (hours)"
+                             Variant="Variant.Outlined" Min="0" Max="168" />
+
+            <MudNumericField @bind-Value="_bookingPage.MaxAdvanceDays" Label="Max Advance Booking (days)"
+                             Variant="Variant.Outlined" Min="1" Max="365" />
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">Active</MudText>
+                    <MudText Typo="Typo.body2" Style="color: #636374;">When enabled, clients can book through your public page.</MudText>
+                </div>
+                <MudSwitch @bind-Value="_bookingPage.IsActive" Color="Color.Primary" T="bool" />
+            </div>
+
+            <div style="display: flex; gap: 8px; padding-top: 8px;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveSettings" Disabled="_saving">
+                    @if (_saving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Save Settings
+                </MudButton>
+                @if (_bookingPage.IsActive)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                               Href="@($"/book/{_bookingPage.Slug}")" Target="_blank"
+                               EndIcon="@Icons.Material.Filled.OpenInNew">
+                        Preview Page
+                    </MudButton>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private string _userId = "";
+    private BookingPage? _bookingPage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+
+        var pages = await BookingPageService.GetByOwnerAsync(_userId);
+        _bookingPage = pages.FirstOrDefault();
+
+        _loading = false;
+    }
+
+    private async Task CreateBookingPage()
+    {
+        _saving = true;
+        try
+        {
+            var slug = _userId.Length >= 8 ? _userId[..8].ToLower() : _userId.ToLower();
+            _bookingPage = await BookingPageService.CreateAsync(new BookingPage
+            {
+                Id = Guid.NewGuid(),
+                OwnerId = _userId,
+                Title = "Book a Meeting",
+                Slug = slug,
+                DefaultDurationMinutes = 30,
+                BufferMinutes = 15,
+                MinNoticeHours = 2,
+                MaxAdvanceDays = 60,
+                IsActive = true
+            });
+            Snackbar.Add("Booking page created", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        if (_bookingPage is null) return;
+
+        _saving = true;
+        try
+        {
+            await BookingPageService.UpdateAsync(_bookingPage);
+            Snackbar.Add("Settings saved", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

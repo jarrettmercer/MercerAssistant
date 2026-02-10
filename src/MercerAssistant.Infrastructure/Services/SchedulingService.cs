@@ -164,10 +164,28 @@ public class SchedulingService : ISchedulingService
 
     public async Task<bool> IsSlotAvailableAsync(string providerId, DateTime startUtc, DateTime endUtc)
     {
-        return !await _db.Appointments.AnyAsync(a =>
+        // Check for conflicting appointments
+        var hasConflict = await _db.Appointments.AnyAsync(a =>
             a.ProviderId == providerId
             && a.Status != AppointmentStatus.Cancelled
             && a.StartTimeUtc < endUtc
             && a.EndTimeUtc > startUtc);
+
+        if (hasConflict)
+            return false;
+
+        // Check the slot falls within an availability window
+        var dayOfWeek = startUtc.DayOfWeek;
+        var startTime = TimeOnly.FromDateTime(startUtc);
+        var endTime = TimeOnly.FromDateTime(endUtc);
+
+        var withinAvailability = await _db.AvailabilityWindows.AnyAsync(w =>
+            w.UserId == providerId
+            && w.DayOfWeek == dayOfWeek
+            && w.IsActive
+            && w.StartTime <= startTime
+            && w.EndTime >= endTime);
+
+        return withinAvailability;
     }
 }

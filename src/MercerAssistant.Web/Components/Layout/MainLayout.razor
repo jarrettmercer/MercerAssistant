@@ -12,21 +12,37 @@
             Mercer<span style="color: #d97706;">Assistant</span>
         </MudText>
         <MudSpacer />
-        <AuthorizeView>
-            <Authorized>
-                <MudText Typo="Typo.body2" Class="mr-3" Style="color: #636374;">@context.User.Identity?.Name</MudText>
-                <form method="post" action="/account/logout">
-                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small">
-                        Logout
-                    </MudButton>
-                </form>
-            </Authorized>
-        </AuthorizeView>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" Variant="DrawerVariant.Mini" OpenMiniOnHover="true"
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" Variant="DrawerVariant.Mini"
                Style="background: #0a0b10; border-right: 1px solid rgba(255,255,255,0.1);">
         <NavMenu />
+        <AuthorizeView>
+            <Authorized>
+                <div class="drawer-profile">
+                    <MudDivider Class="mb-3" Style="border-color: rgba(255,255,255,0.1);" />
+                    <div class="profile-section">
+                        <div class="profile-avatar">
+                            <MudAvatar Color="Color.Primary" Size="Size.Small" Style="font-weight: 600; font-size: 13px;">
+                                @GetInitials(context.User.Identity?.Name)
+                            </MudAvatar>
+                        </div>
+                        <div class="profile-info">
+                            <MudText Typo="Typo.body2" Style="color: #fff; font-weight: 600; overflow: hidden; text-overflow: ellipsis;">
+                                @context.User.Identity?.Name
+                            </MudText>
+                            <form method="post" action="/account/logout">
+                                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Logout"
+                                           Style="color: #636374; padding: 0; min-width: 0; font-size: 12px; text-transform: none;">
+                                    Logout
+                                </MudButton>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     </MudDrawer>
 
     <MudMainContent Style="padding-top: 64px;">
@@ -72,5 +88,14 @@
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpper()
+            : name[..Math.Min(2, name.Length)].ToUpper();
     }
 }

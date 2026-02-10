@@ -212,6 +212,43 @@
     margin-top: 2px;
 }
 
+/* ===== DRAWER PROFILE ===== */
+.mud-drawer .mud-drawer-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.mud-drawer .mud-navmenu {
+    flex: 1;
+}
+
+.drawer-profile {
+    padding: 8px 0 12px;
+    overflow: hidden;
+}
+
+.profile-section {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    overflow: hidden;
+}
+
+.profile-avatar {
+    min-width: 56px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.profile-info {
+    overflow: hidden;
+    min-width: 0;
+    white-space: nowrap;
+    padding-right: 16px;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeInUp {
     from {

@@ -54,4 +54,4 @@ appsettings.*.local.json
 *.db-shm
 *.db-wal
 
-*.dll"
+*.dll

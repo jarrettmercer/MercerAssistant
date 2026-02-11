@@ -1,3 +1,4 @@
+using Azure.AI.OpenAI;
 using MercerAssistant.Web.Components;
 using MercerAssistant.Core.Entities;
 using MercerAssistant.Core.Enums;
@@ -7,6 +8,7 @@ using MercerAssistant.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using System.ClientModel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +52,22 @@ foreach (var perm in AppPermission.All)
 {
     authBuilder.AddPolicy(perm.Value, policy =>
         policy.RequireClaim(AppPermission.ClaimType, perm.Value));
+}
+
+// --- Azure OpenAI ---
+var azureEndpoint = builder.Configuration["AzureAI:Endpoint"];
+var azureApiKey = builder.Configuration["AzureAI:ApiKey"];
+var azureDeployment = builder.Configuration["AzureAI:DeploymentName"] ?? "gpt-51-mini";
+
+if (!string.IsNullOrEmpty(azureEndpoint) && !string.IsNullOrEmpty(azureApiKey))
+{
+    var clientOptions = new AzureOpenAIClientOptions(
+        AzureOpenAIClientOptions.ServiceVersion.V2025_04_01_Preview);
+    var azureClient = new AzureOpenAIClient(
+        new Uri(azureEndpoint),
+        new ApiKeyCredential(azureApiKey),
+        clientOptions);
+    builder.Services.AddSingleton(azureClient.GetChatClient(azureDeployment));
 }
 
 // --- Application Services ---

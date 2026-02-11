@@ -37,6 +37,7 @@
                       Adornment="Adornment.End"
                       AdornmentIcon="@Icons.Material.Filled.Send"
                       OnAdornmentClick="SendMessage"
+                      OnKeyDown="OnKeyDown"
                       Immediate="true"
                       Disabled="_isLoading"
                       FullWidth="true" />
@@ -45,11 +46,23 @@
 
 @code {
     [Inject] private IAIAssistantService AIService { get; set; } = null!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = null!;
 
     private List<ChatBubbleModel> _messages = [];
     private string _userInput = "";
     private bool _isLoading;
     private ElementReference _scrollContainer;
+    private Guid _conversationId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (userId is not null)
+        {
+            _conversationId = await AIService.StartConversationAsync(userId);
+        }
+    }
 
     private async Task SendMessage()
     {
@@ -61,12 +74,19 @@
         _isLoading = true;
         StateHasChanged();
 
-        // TODO: Phase 3 - wire up real conversation ID
-        var response = await AIService.SendMessageAsync(Guid.Empty, userMsg);
+        var response = await AIService.SendMessageAsync(_conversationId, userMsg);
 
         _messages.Add(new("assistant", response.Message, DateTime.Now));
         _isLoading = false;
         StateHasChanged();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
     }
 
     private record ChatBubbleModel(string Role, string Content, DateTime Timestamp);
